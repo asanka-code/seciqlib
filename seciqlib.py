@@ -1,15 +1,12 @@
-
-# Reference: http://witestlab.poly.edu/~ffund/el9043/labs/lab1.html
-
-
-# includes core parts of numpy, matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fftpack import fft, fftfreq, fftshift
+from sklearn import preprocessing
 
 sampleRate=20000000
 
 '''
+# Reference: http://witestlab.poly.edu/~ffund/el9043/labs/lab1.html
 # practice reading in complex values stored in a file
 # Read in data that has been stored as raw I/Q interleaved 32-bit float samples
 dat = np.fromfile("./data/with-aes.cfile", dtype="float32")
@@ -175,3 +172,19 @@ def getFFTVector(data, timeOffset, window):
     # return the absolute values of the FFT vector.
     return np.abs(new_yf)    
     
+def getNormalizedFFTVector(data, timeOffset, window):
+    """
+    Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
+    and a file name for the graph, this function generates the FFT vector as a numpy array and
+    normalize it before returning it.
+    """
+    # get the FFT vector as a numpy array
+    fftdata = getFFTVector(data,timeOffset, window)
+    # normalize the numpy array (note that we input the fftdata inside []. So, the
+    # input data is basically a 2-D vector)
+    fft_normalized = preprocessing.normalize([fftdata], norm='l2')
+    # return normalized numpy array (we take the first dimention which is the correct array)
+    return fft_normalized[0]
+
+
+
