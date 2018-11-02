@@ -32,26 +32,26 @@ def getData(cfileName):
     data = data[0::2] + 1j*data[1::2]
     return data
 
-def getSegment(timeOffset):
+def getSegment(timeOffset, window):
     # Segment window (seconds)
-    w = 0.08
+    #w = 0.08
     # Segment starting offset (sample points)
     start = timeOffset * sampleRate
     # Segment ending offset (sample points)
-    end = start + (w * sampleRate)
+    end = start + (window * sampleRate)
     #print("start=%d", int(start))
     #print("end=%d", int(end))
     return int(start), int(end)
 
-def plotWaveform(data, timeOffset, wavformFileName):
-    start, end = getSegment(timeOffset)
+def plotWaveform(data, timeOffset, window, wavformFileName):
+    start, end = getSegment(timeOffset, window)
     plt.figure()
     plt.plot(data[start:end])
     plt.savefig('./spectrograms/' + wavformFileName +'.pdf', fotmat='pdf', bbox_inches='tight')
     return 1
 
-def plotScatter(data, timeOffset, scatterFileName):
-    start, end = getSegment(timeOffset)
+def plotScatter(data, timeOffset, window, scatterFileName):
+    start, end = getSegment(timeOffset, window)
     # And let's look at it on the complex plane
     # Note that showing *every* data point would be time- and processing-intensive
     # so we'll just show a few
@@ -61,15 +61,15 @@ def plotScatter(data, timeOffset, scatterFileName):
     plt.savefig('./spectrograms/' + scatterFileName +'.pdf', fotmat='pdf', bbox_inches='tight')
     return 1
 
-def plotPSD(data, timeOffset, psdFileName):
-    start, end = getSegment(timeOffset)
+def plotPSD(data, timeOffset, window, psdFileName):
+    start, end = getSegment(timeOffset, window)
     plt.figure()
     plt.psd(data[start:end], NFFT=1024, Fs=sampleRate)
     plt.savefig('./spectrograms/' + psdFileName +'.png', fotmat='pdf', bbox_inches='tight')
     return 1
     
-def plotFFT(data, timeOffset, fftFileName):
-    start, end = getSegment(timeOffset)            
+def plotFFT(data, timeOffset, window, fftFileName):
+    start, end = getSegment(timeOffset, window)            
     N = len(data[start:end])
     T = 1.0 / sampleRate
     yf = fft(data[start:end])
@@ -82,8 +82,8 @@ def plotFFT(data, timeOffset, fftFileName):
     plt.savefig('./spectrograms/' + fftFileName +'.png', fotmat='pdf', bbox_inches='tight')
     return 1
 
-def plotSpectrogram(data, timeOffset, specFileName):
-    start, end = getSegment(timeOffset)    
+def plotSpectrogram(data, timeOffset, window, specFileName):
+    start, end = getSegment(timeOffset, window)    
     plt.specgram(data[start:end], NFFT=4096, Fs=sampleRate, cmap=plt.cm.get_cmap("Greys"))
     #plt.xlabel("Time (s)")
     #plt.ylabel("Frequency (MHz)")
@@ -95,5 +95,14 @@ def plotSpectrogram(data, timeOffset, specFileName):
     plt.savefig('./spectrograms/' + specFileName +'.png', fotmat='png', bbox_inches='tight', pad_inches=0)
     #plt.savefig('spectrogram-from-iq.pdf', fotmat='pdf', bbox_inches='tight')
     return 1
+        
+def getFFTVector(data, timeOffset, window):
+    start, end = getSegment(timeOffset, window)            
+    N = len(data[start:end])
+    #T = 1.0 / sampleRate
+    yf = fft(data[start:end])
+    #freqs = fftfreq(N, T)
+    #shifted_freqs = fftshift(freqs)
+    new_yf = np.concatenate((yf[N/2:N], yf[0:N/2]))    
+    return np.abs(new_yf)    
     
-
