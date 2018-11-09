@@ -1,12 +1,16 @@
+
+# Reference: http://witestlab.poly.edu/~ffund/el9043/labs/lab1.html
+
+
+# includes core parts of numpy, matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fftpack import fft, fftfreq, fftshift
 from sklearn import preprocessing
 
-sampleRate=20000000
+sampleRate=20000000.0
 
 '''
-# Reference: http://witestlab.poly.edu/~ffund/el9043/labs/lab1.html
 # practice reading in complex values stored in a file
 # Read in data that has been stored as raw I/Q interleaved 32-bit float samples
 dat = np.fromfile("./data/with-aes.cfile", dtype="float32")
@@ -53,7 +57,18 @@ def getSegment(timeOffset, window):
     #print("end=%d", int(end))
     #Return the starting index and ending index
     return int(start), int(end)
-
+    
+def getTimeDuration(data):
+    """
+    Given a data array, this function returns the time duration (seconds) of the data array.
+    This return value of duration is a float.
+    """
+    # number of samples divided by sample rate gives the time duration of the total samples
+    duration = len(data)/sampleRate
+    #print("duration=", duration)
+    # return the time duration of the dataset
+    return duration    
+    
 def plotWaveform(data, timeOffset, window, wavformFileName):
     """
     Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
