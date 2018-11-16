@@ -143,7 +143,7 @@ def plotFFT(data, timeOffset, window, fftFileName):
     #print('len(shifted_freqs)=%d' % len(shifted_freqs))    
     #print('len(new_yf)=%d' % len(new_yf))        
     # save theFFT plot as a PDF file.
-    plt.savefig('./spectrograms/' + fftFileName +'.png', fotmat='pdf', bbox_inches='tight')
+    plt.savefig('./' + fftFileName +'.png', fotmat='pdf', bbox_inches='tight')
     return 1
 
 def plotSpectrogram(data, timeOffset, window, specFileName):
@@ -195,6 +195,11 @@ def getNormalizedFFTVector(data, timeOffset, window):
     """
     # get the FFT vector as a numpy array
     fftdata = getFFTVector(data,timeOffset, window)
+
+    # DC spike at the center due to the nature of SDR should be removed
+    N = len(fftdata)
+    fftdata[N/2] = 0    
+    
     # normalize the numpy array (note that we input the fftdata inside []. So, the
     # input data is basically a 2-D vector)
     fft_normalized = preprocessing.normalize([fftdata], norm='l2')
