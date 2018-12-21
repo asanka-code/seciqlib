@@ -206,5 +206,67 @@ def getNormalizedFFTVector(data, timeOffset, window):
     # return normalized numpy array (we take the first dimention which is the correct array)
     return fft_normalized[0]
 
+def getFullFFTVector(data):
+    """
+    Given a data set as a complex numpy array, this function returns the FFT vector as a numpy array.
+    """
+    # get the length of the data sample        
+    N = len(data)
+    # calculate the FFT of the sample. But the FFT x axis contains data
+    # in the range from 0 to positive values first and at the end the negative values
+    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
+    yf = fft(data)
+    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
+    new_yf = np.concatenate((yf[N/2:N], yf[0:N/2]))
+    # return the absolute values of the FFT vector.
+    return np.abs(new_yf)  
 
+def getBucketedNormalizedFFTVector(data):
 
+    # time window in seconds
+    window_time = 0.01
+    window_length = window_time * sampleRate
+    timeOffset = ((len(data)-1) - window_length) / sampleRate
+    start, end = getSegment(timeOffset, window_time)
+    fftdata = getFFTVector(data,timeOffset, window_time)
+    
+    
+    # get the FFT vector as a numpy array
+    #fftdata = getFullFFTVector(data)
+
+    # DC spike at the center due to the nature of SDR should be removed
+    N = len(fftdata)
+    fftdata[N/2] = 0
+    
+    # Use only the middle portion of the FFT vector as a feature vector
+    featureVector = fftdata[N/4:3*N/4]
+    #featureVector = fftdata[3*N/8:5*N/8]
+    
+    
+    # Make the feature vector small by breaking and averaging into 500 buckets.   
+
+    # lenth of the FFT vector we are considering
+    L = len(featureVector)
+    # number of buckets
+    l = 500
+    
+    index = 0
+    bucketSize = L/l
+    vector = []
+    while index<len(featureVector):
+        avg = sum(featureVector[index:index+bucketSize])/len(featureVector[index:index+bucketSize])
+        vector.append(avg)
+        index = index + bucketSize
+    
+    #print("len(vector)=%d" % len(vector))
+    #print("vector=", vector)
+    fft_normalized = preprocessing.normalize([vector], norm='l2')
+        
+    
+    # normalize the numpy array (note that we input the fftdata inside []. So, the
+    # input data is basically a 2-D vector)
+    #fft_normalized = preprocessing.normalize([fftdata], norm='l2')
+    
+    # return normalized numpy array (we take the first dimention which is the correct array)
+    return fft_normalized[0]
+    
