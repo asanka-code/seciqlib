@@ -1,4 +1,3 @@
-
 # Reference: http://witestlab.poly.edu/~ffund/el9043/labs/lab1.html
 
 
@@ -211,7 +210,170 @@ def plotSpectrogram(data, show=1):
         #plt.savefig('spectrogram-from-iq.pdf', fotmat='pdf', bbox_inches='tight')
         
     return 1
+
+
+def getFeatureVector(data):
+    """
+    Given a data set as a complex numpy array, this function returns a 500 elements long feature vector.
+    """
+    N = len(data)
+    # calculate the FFT of the selected sample range. But the FFT x axis contains data
+    # in the range from 0 to positive values first and at the end the negative values
+    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
+    yf = fft(data)
+    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
+    new_yf = np.concatenate((yf[int(N/2):int(N)], yf[0:int(N/2)]))
+    fftdata = np.abs(new_yf)
     
+    # DC spike at the center due to the nature of SDR should be removed
+    N = len(fftdata)
+    fftdata[int(N/2)] = 0
+    
+    # Use only the middle portion of the FFT vector as a feature vector
+    featureVector = fftdata[int(N/4):int(3*N/4)]
+    #featureVector = fftdata[3*N/8:5*N/8]
+       
+    # Make the feature vector small by breaking and averaging into 500 buckets.   
+    # lenth of the FFT vector we are considering
+    L = len(featureVector)
+    # number of buckets
+    l = 500
+    index = 0
+    bucketSize = L/l
+    vector = []
+    while index<len(featureVector):
+        avg = sum(featureVector[index:index+int(bucketSize)])/len(featureVector[index:index+int(bucketSize)])
+        vector.append(avg)
+        index = index + int(bucketSize)
+    
+    fft_normalized = preprocessing.normalize([vector], norm='l2')
+
+    # get the normalized numpy array (we take the first dimention which is the correct array)
+    feature_vector = fft_normalized[0]
+    return feature_vector[0:l]
+
+
+###############################################################################
+#                         Depreciated function                                #
+###############################################################################
+
+def getSegment(timeOffset, window):
+    """
+    Given a starting time offset (seconds) and a time window (seconds), this function
+    returns the starting and ending sample indexes of a complex numpy array.
+    """
+    # Segment starting offset (sample points)
+    start = timeOffset * sampleRate
+    # Segment ending offset (sample points)
+    end = start + (window * sampleRate)
+    #print("start=%d", int(start))
+    #print("end=%d", int(end))
+    #Return the starting index and ending index
+    return int(start), int(end)
+
+def getFFTVector(data, timeOffset, window):
+    """
+    Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
+    and a file name for the graph, this function returns the FFT vector as a numpy array.
+    """
+    # Get the desired starting and ending index of the numpy data array
+    start, end = getSegment(timeOffset, window)    
+    # get the length of the selected data sample range        
+    N = len(data[start:end])
+    
+    print("segment length = ", N)
+    
+    # calculate the FFT of the selected sample range. But the FFT x axis contains data
+    # in the range from 0 to positive values first and at the end the negative values
+    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
+    yf = fft(data[start:end])
+    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
+    new_yf = np.concatenate((yf[int(N/2):int(N)], yf[0:int(N/2)]))
+    # return the absolute values of the FFT vector.
+    return np.abs(new_yf)
+
+
+def getNormalizedFFTVector(data, timeOffset, window):
+    """
+    Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
+    and a file name for the graph, this function generates the FFT vector as a numpy array and
+    normalize it before returning it.
+    """
+    # get the FFT vector as a numpy array
+    fftdata = getFFTVector(data,timeOffset, window)
+
+    # DC spike at the center due to the nature of SDR should be removed
+    N = len(fftdata)
+    fftdata[N/2] = 0    
+    
+    # normalize the numpy array (note that we input the fftdata inside []. So, the
+    # input data is basically a 2-D vector)
+    fft_normalized = preprocessing.normalize([fftdata], norm='l2')
+    # return normalized numpy array (we take the first dimention which is the correct array)
+    return fft_normalized[0]
+
+def getFullFFTVector(data):
+    """
+    Given a data set as a complex numpy array, this function returns the FFT vector as a numpy array.
+    """
+    # get the length of the data sample        
+    N = len(data)
+    # calculate the FFT of the sample. But the FFT x axis contains data
+    # in the range from 0 to positive values first and at the end the negative values
+    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
+    yf = fft(data)
+    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
+    new_yf = np.concatenate((yf[N/2:N], yf[0:N/2]))
+    # return the absolute values of the FFT vector.
+    return np.abs(new_yf)
+
+def getBucketedNormalizedFFTVector(data):
+    # time window in seconds
+    window_time = 0.01
+    window_length = window_time * sampleRate
+    timeOffset = ((len(data)-1) - window_length) / sampleRate
+    start, end = getSegment(timeOffset, window_time)
+    fftdata = getFFTVector(data,timeOffset, window_time)
+    
+    
+    # get the FFT vector as a numpy array
+    #fftdata = getFullFFTVector(data)
+
+    # DC spike at the center due to the nature of SDR should be removed
+    N = len(fftdata)
+    fftdata[int(N/2)] = 0
+    
+    # Use only the middle portion of the FFT vector as a feature vector
+    featureVector = fftdata[int(N/4):int(3*N/4)]
+    #featureVector = fftdata[3*N/8:5*N/8]
+    
+    
+    # Make the feature vector small by breaking and averaging into 500 buckets.   
+
+    # lenth of the FFT vector we are considering
+    L = len(featureVector)
+    # number of buckets
+    l = 500
+    
+    index = 0
+    bucketSize = L/l
+    vector = []
+    while index<len(featureVector):
+        avg = sum(featureVector[index:index+int(bucketSize)])/len(featureVector[index:index+int(bucketSize)])
+        vector.append(avg)
+        index = index + int(bucketSize)
+    
+    #print("len(vector)=%d" % len(vector))
+    #print("vector=", vector)
+    fft_normalized = preprocessing.normalize([vector], norm='l2')
+        
+    
+    # normalize the numpy array (note that we input the fftdata inside []. So, the
+    # input data is basically a 2-D vector)
+    #fft_normalized = preprocessing.normalize([fftdata], norm='l2')
+    
+    # return normalized numpy array (we take the first dimention which is the correct array)
+    return fft_normalized[0]
 
 def getBucketedNormalizedFFTVectorFromFile():
     '''
@@ -297,133 +459,6 @@ def getBucketedNormalizedFFTVectorFromFile():
     
     # return normalized numpy array (we take the first dimention which is the correct array)
     return fft_normalized[0]
-
-
-
-###############################################################################
-#                         Depreciated function                                #
-###############################################################################
-
-def getSegment(timeOffset, window):
-    """
-    Given a starting time offset (seconds) and a time window (seconds), this function
-    returns the starting and ending sample indexes of a complex numpy array.
-    """
-    # Segment starting offset (sample points)
-    start = timeOffset * sampleRate
-    # Segment ending offset (sample points)
-    end = start + (window * sampleRate)
-    #print("start=%d", int(start))
-    #print("end=%d", int(end))
-    #Return the starting index and ending index
-    return int(start), int(end)
-
-def getFFTVector(data, timeOffset, window):
-    """
-    Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
-    and a file name for the graph, this function returns the FFT vector as a numpy array.
-    """
-    # Get the desired starting and ending index of the numpy data array
-    start, end = getSegment(timeOffset, window)    
-    # get the length of the selected data sample range        
-    N = len(data[start:end])
-    
-    print("segment length = ", N)
-    
-    # calculate the FFT of the selected sample range. But the FFT x axis contains data
-    # in the range from 0 to positive values first and at the end the negative values
-    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
-    yf = fft(data[start:end])
-    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
-    new_yf = np.concatenate((yf[int(N/2):int(N)], yf[0:int(N/2)]))
-    # return the absolute values of the FFT vector.
-    return np.abs(new_yf)
-
-
-def getNormalizedFFTVector(data, timeOffset, window):
-    """
-    Given a data set as a complex numpy array, a time offset (seconds), a time window (seconds)
-    and a file name for the graph, this function generates the FFT vector as a numpy array and
-    normalize it before returning it.
-    """
-    # get the FFT vector as a numpy array
-    fftdata = getFFTVector(data,timeOffset, window)
-
-    # DC spike at the center due to the nature of SDR should be removed
-    N = len(fftdata)
-    fftdata[N/2] = 0    
-    
-    # normalize the numpy array (note that we input the fftdata inside []. So, the
-    # input data is basically a 2-D vector)
-    fft_normalized = preprocessing.normalize([fftdata], norm='l2')
-    # return normalized numpy array (we take the first dimention which is the correct array)
-    return fft_normalized[0]
-
-def getFullFFTVector(data):
-    """
-    Given a data set as a complex numpy array, this function returns the FFT vector as a numpy array.
-    """
-    # get the length of the data sample        
-    N = len(data)
-    # calculate the FFT of the sample. But the FFT x axis contains data
-    # in the range from 0 to positive values first and at the end the negative values
-    # like 0, 1, 2, 3, 4, -4, -3, -2, -1
-    yf = fft(data)
-    # rearrange the FFT vector to have it zero-centered, e.g., -4, -3, -2, -1, 0, 1, 2, 3, 4
-    new_yf = np.concatenate((yf[N/2:N], yf[0:N/2]))
-    # return the absolute values of the FFT vector.
-    return np.abs(new_yf)
-
-def getBucketedNormalizedFFTVector(data):
-
-    # time window in seconds
-    window_time = 0.01
-    window_length = window_time * sampleRate
-    timeOffset = ((len(data)-1) - window_length) / sampleRate
-    start, end = getSegment(timeOffset, window_time)
-    fftdata = getFFTVector(data,timeOffset, window_time)
-    
-    
-    # get the FFT vector as a numpy array
-    #fftdata = getFullFFTVector(data)
-
-    # DC spike at the center due to the nature of SDR should be removed
-    N = len(fftdata)
-    fftdata[int(N/2)] = 0
-    
-    # Use only the middle portion of the FFT vector as a feature vector
-    featureVector = fftdata[int(N/4):int(3*N/4)]
-    #featureVector = fftdata[3*N/8:5*N/8]
-    
-    
-    # Make the feature vector small by breaking and averaging into 500 buckets.   
-
-    # lenth of the FFT vector we are considering
-    L = len(featureVector)
-    # number of buckets
-    l = 500
-    
-    index = 0
-    bucketSize = L/l
-    vector = []
-    while index<len(featureVector):
-        avg = sum(featureVector[index:index+int(bucketSize)])/len(featureVector[index:index+int(bucketSize)])
-        vector.append(avg)
-        index = index + int(bucketSize)
-    
-    #print("len(vector)=%d" % len(vector))
-    #print("vector=", vector)
-    fft_normalized = preprocessing.normalize([vector], norm='l2')
-        
-    
-    # normalize the numpy array (note that we input the fftdata inside []. So, the
-    # input data is basically a 2-D vector)
-    #fft_normalized = preprocessing.normalize([fftdata], norm='l2')
-    
-    # return normalized numpy array (we take the first dimention which is the correct array)
-    return fft_normalized[0]
-
-
 
 ###############################################################################
 #                         Deleted function                                #
