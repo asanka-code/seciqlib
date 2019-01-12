@@ -230,20 +230,25 @@ def getFeatureVector(data):
     fftdata[int(N/2)] = 0
     
     # Use only the middle portion of the FFT vector as a feature vector
-    featureVector = fftdata[int(N/4):int(3*N/4)]
+    #featureVector = fftdata[int(N/4):int(3*N/4)]
     #featureVector = fftdata[3*N/8:5*N/8]
+    featureVector = fftdata       
        
     # Make the feature vector small by breaking and averaging into 500 buckets.   
     # lenth of the FFT vector we are considering
     L = len(featureVector)
     # number of buckets
-    l = 500
+    #l = 500
+    l = 1000
     index = 0
     bucketSize = L/l
     vector = []
     while index<len(featureVector):
-        avg = sum(featureVector[index:index+int(bucketSize)])/len(featureVector[index:index+int(bucketSize)])
-        vector.append(avg)
+        #avg = sum(featureVector[index:index+int(bucketSize)])/len(featureVector[index:index+int(bucketSize)])
+        #vector.append(avg)
+        maxi = max(featureVector[index:index+int(bucketSize)])
+        vector.append(maxi)    
+    
         index = index + int(bucketSize)
     
     fft_normalized = preprocessing.normalize([vector], norm='l2')
